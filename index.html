@@ -16,9 +16,7 @@
     <section class="upload-section">
         <h3>✨ Adicionar novo Pin</h3>
         <input type="text" id="pinTitle" placeholder="Título do Pin (ex: Sunset Vibes)">
-        
-        <input type="file" id="pinImage" accept="image/*">
-        <label for="pinImage" class="custom-file-label" id="fileLabel">📁 Escolher Imagem</label>
+        <input type="text" id="pinImage" placeholder="Cole o link da imagem (URL)...">
 
         <button id="uploadBtn">Postar Pin 🚀</button>
     </section>
@@ -37,6 +35,9 @@
             <button id="closeMusicBtn" title="Fechar música">❌</button>
         </div>
     </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <script src="script.js"></script>
 </body>

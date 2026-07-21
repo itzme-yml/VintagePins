@@ -1,54 +1,72 @@
 // ==========================================
-// 💾 1. CARREGAR PINS SALVOS
+// 🔥 1. CONFIGURAÇÃO DO FIREBASE
 // ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCvaQJmf5r8Ghf1fRHR0Dc1xUMmGHpkebo",
+  authDomain: "vintagepins.firebaseapp.com",
+  projectId: "vintagepins",
+  storageBucket: "vintagepins.firebasestorage.app",
+  messagingSenderId: "1085260664647",
+  appId: "1:1085260664647:web:b3b46c3d22f2c64caec662"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const storage = firebase.storage();
+
 const cardsContainer = document.getElementById('cardsContainer');
 
-function loadSavedPins() {
-  const savedPins = JSON.parse(localStorage.getItem('vintagePins')) || [];
-  cardsContainer.innerHTML = '';
-  
-  savedPins.forEach((pin, index) => {
-    createCardDOM(pin.title, pin.image, index);
+// ==========================================
+// 💾 2. CARREGAR PINS DA NUVEM (EM TEMPO REAL)
+// ==========================================
+function listenToPins() {
+  db.collection('pins').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+    cardsContainer.innerHTML = '';
+    
+    snapshot.forEach((doc) => {
+      const pin = doc.data();
+      createCardDOM(pin.title, pin.image, doc.id);
+    });
+  }, (error) => {
+    console.error("Erro ao carregar pins do Firebase:", error);
   });
 }
 
-function createCardDOM(title, imageUrl, index) {
+function createCardDOM(title, imageUrl, pinId) {
   const newCard = document.createElement('div');
   newCard.classList.add('card');
 
-  // Criação dos elementos via JS para maior segurança
   const deleteBtn = document.createElement('button');
   deleteBtn.classList.add('delete-btn');
   deleteBtn.innerHTML = '🗑️';
   deleteBtn.title = 'Excluir Pin';
-  deleteBtn.addEventListener('click', () => deletePin(index));
+  deleteBtn.addEventListener('click', () => deletePin(pinId));
 
   const img = document.createElement('img');
   img.src = imageUrl;
   img.alt = title;
 
   const h2 = document.createElement('h2');
-  h2.textContent = title; // Previne XSS/Injeção de código
+  h2.textContent = title;
 
   newCard.appendChild(deleteBtn);
   newCard.appendChild(img);
   newCard.appendChild(h2);
 
-  cardsContainer.prepend(newCard);
+  cardsContainer.appendChild(newCard);
 }
 
-loadSavedPins();
-
+listenToPins();
 
 // ==========================================
-// 🚀 2. ADICIONAR E SALVAR NOVO PIN
+// 🚀 3. ENVIAR NOVO PIN PARA A NUVEM
 // ==========================================
 const uploadBtn = document.getElementById('uploadBtn');
 const pinTitleInput = document.getElementById('pinTitle');
 const pinImageInput = document.getElementById('pinImage');
 const fileLabel = document.getElementById('fileLabel');
 
-// Atualiza o texto da label quando um arquivo for selecionado
 if (pinImageInput) {
   pinImageInput.addEventListener('change', () => {
     if (pinImageInput.files.length > 0) {
@@ -59,7 +77,7 @@ if (pinImageInput) {
   });
 }
 
-uploadBtn.addEventListener('click', () => {
+uploadBtn.addEventListener('click', async () => {
   const titleText = pinTitleInput.value.trim();
   const imageFile = pinImageInput.files[0];
 
@@ -68,57 +86,50 @@ uploadBtn.addEventListener('click', () => {
     return;
   }
 
-  const reader = new FileReader();
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = 'Enviando... ⏳';
 
-  reader.onload = function(e) {
-    const img = new Image();
-    img.src = e.target.result;
+  try {
+    // 1. Enviar imagem para o Firebase Storage
+    const storageRef = storage.ref(`pins/${Date.now()}_${imageFile.name}`);
+    const snapshot = await storageRef.put(imageFile);
+    const imageUrl = await snapshot.ref.getDownloadURL();
 
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const maxWidth = 500;
-      const scaleSize = maxWidth / img.width;
+    // 2. Salvar título e URL da imagem no Firestore Database
+    await db.collection('pins').add({
+      title: titleText,
+      image: imageUrl,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
 
-      canvas.width = maxWidth;
-      canvas.height = img.height * scaleSize;
-
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const compressedImageUrl = canvas.toDataURL('image/jpeg', 0.7);
-
-      try {
-        const savedPins = JSON.parse(localStorage.getItem('vintagePins')) || [];
-        savedPins.push({ title: titleText, image: compressedImageUrl });
-        localStorage.setItem('vintagePins', JSON.stringify(savedPins));
-
-        loadSavedPins();
-
-        pinTitleInput.value = '';
-        pinImageInput.value = '';
-        fileLabel.textContent = '📁 Escolher Imagem';
-      } catch (err) {
-        alert('Sua memória local encheu! Apague alguns pins usando a lixeira 🗑️');
-      }
-    };
-  };
-
-  reader.readAsDataURL(imageFile);
+    pinTitleInput.value = '';
+    pinImageInput.value = '';
+    fileLabel.textContent = '📁 Escolher Imagem';
+    alert('Pin postado com sucesso!');
+  } catch (error) {
+    console.error('Erro ao postar:', error);
+    alert('Erro ao enviar o Pin. Verifica se ativaste o Firestore e o Storage no modo de teste!');
+  } finally {
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = 'Postar Pin 🚀';
+  }
 });
 
-
 // ==========================================
-// ❌ 3. EXCLUIR PIN
+// ❌ 4. EXCLUIR PIN DA NUVEM
 // ==========================================
-function deletePin(index) {
-  let savedPins = JSON.parse(localStorage.getItem('vintagePins')) || [];
-  savedPins.splice(index, 1);
-  localStorage.setItem('vintagePins', JSON.stringify(savedPins));
-  loadSavedPins();
+async function deletePin(pinId) {
+  if (confirm('Tem certeza que deseja apagar este pin para todo mundo?')) {
+    try {
+      await db.collection('pins').doc(pinId).delete();
+    } catch (error) {
+      alert('Erro ao apagar o pin!');
+    }
+  }
 }
 
-
 // ==========================================
-// 🔍 4. FILTRO DE PESQUISA
+// 🔍 5. FILTRO DE PESQUISA
 // ==========================================
 const searchInput = document.getElementById('searchInput');
 
@@ -138,9 +149,8 @@ if (searchInput) {
   });
 }
 
-
 // ==========================================
-// 🎵 5. PLAYER DE MÚSICA DO YOUTUBE
+// 🎵 6. PLAYER DE MÚSICA DO YOUTUBE
 // ==========================================
 const loadMusicBtn = document.getElementById('loadMusicBtn');
 const ytUrlInput = document.getElementById('ytUrlInput');
@@ -190,10 +200,6 @@ function playYouTubeMusic() {
   if (closeMusicBtn) closeMusicBtn.style.display = 'inline-block';
 }
 
-
-// ==========================================
-// ❌ 6. FECHAR MÚSICA
-// ==========================================
 if (closeMusicBtn) {
   closeMusicBtn.addEventListener('click', () => {
     ytPlayer.src = '';

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VintagePins</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>VintagePins</h1>
+        <input type="text" id="searchInput" placeholder="Pesquisar pins salvos...">
+    </header>
+
+    <section class="upload-section">
+        <h3>✨ Adicionar novo Pin</h3>
+        <input type="text" id="pinTitle" placeholder="Título do Pin (ex: Sunset Vibes)">
+        
+        <input type="file" id="pinImage" accept="image/*">
+        <label for="pinImage" class="custom-file-label" id="fileLabel">📁 Escolher Imagem</label>
+
+        <button id="uploadBtn">Postar Pin 🚀</button>
+    </section>
+
+    <main id="cardsContainer">
+    </main>
+
+    <footer>
+        <div class="music-controls">
+            <input type="text" id="ytUrlInput" placeholder="Cole o link ou ID da música do YouTube...">
+            <button id="loadMusicBtn">Tocar 🎵</button>
+        </div>
+
+        <div class="player-container">
+            <iframe id="ytPlayer" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            <button id="closeMusicBtn" title="Fechar música">❌</button>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

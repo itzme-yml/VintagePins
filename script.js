@@ -1,5 +1,5 @@
 // ==========================================
-// 🔥 1. CONFIGURAÇÃO DO FIREBASE
+// 🔥 1. CONFIGURAÇÃO DO FIREBASE (SÓ FIRESTORE)
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyCvaQJmf5r8Ghf1fRHR0Dc1xUMmGHpkebo",
@@ -13,7 +13,6 @@ const firebaseConfig = {
 // Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 const cardsContainer = document.getElementById('cardsContainer');
 
@@ -29,7 +28,7 @@ function listenToPins() {
       createCardDOM(pin.title, pin.image, doc.id);
     });
   }, (error) => {
-    console.error("Erro ao carregar pins do Firebase:", error);
+    console.error("Erro ao carregar pins:", error);
   });
 }
 
@@ -65,24 +64,13 @@ listenToPins();
 const uploadBtn = document.getElementById('uploadBtn');
 const pinTitleInput = document.getElementById('pinTitle');
 const pinImageInput = document.getElementById('pinImage');
-const fileLabel = document.getElementById('fileLabel');
-
-if (pinImageInput) {
-  pinImageInput.addEventListener('change', () => {
-    if (pinImageInput.files.length > 0) {
-      fileLabel.textContent = `📷 ${pinImageInput.files[0].name.slice(0, 15)}...`;
-    } else {
-      fileLabel.textContent = '📁 Escolher Imagem';
-    }
-  });
-}
 
 uploadBtn.addEventListener('click', async () => {
   const titleText = pinTitleInput.value.trim();
-  const imageFile = pinImageInput.files[0];
+  const imageUrl = pinImageInput.value.trim();
 
-  if (!titleText || !imageFile) {
-    alert('Por favor, preencha o título e escolha uma imagem!');
+  if (!titleText || !imageUrl) {
+    alert('Por favor, preencha o título e o link da imagem!');
     return;
   }
 
@@ -90,12 +78,7 @@ uploadBtn.addEventListener('click', async () => {
   uploadBtn.textContent = 'Enviando... ⏳';
 
   try {
-    // 1. Enviar imagem para o Firebase Storage
-    const storageRef = storage.ref(`pins/${Date.now()}_${imageFile.name}`);
-    const snapshot = await storageRef.put(imageFile);
-    const imageUrl = await snapshot.ref.getDownloadURL();
-
-    // 2. Salvar título e URL da imagem no Firestore Database
+    // Salva título e link no Firestore Database
     await db.collection('pins').add({
       title: titleText,
       image: imageUrl,
@@ -104,11 +87,10 @@ uploadBtn.addEventListener('click', async () => {
 
     pinTitleInput.value = '';
     pinImageInput.value = '';
-    fileLabel.textContent = '📁 Escolher Imagem';
     alert('Pin postado com sucesso!');
   } catch (error) {
     console.error('Erro ao postar:', error);
-    alert('Erro ao enviar o Pin. Verifica se ativaste o Firestore e o Storage no modo de teste!');
+    alert('Erro ao enviar o Pin. Tente novamente!');
   } finally {
     uploadBtn.disabled = false;
     uploadBtn.textContent = 'Postar Pin 🚀';

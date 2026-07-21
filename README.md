@@ -2,7 +2,7 @@
 
 Um mural digital retrô para salvar e organizar suas inspirações visuais, com direito a um player de música integrado do YouTube!
 
-![VintagePins Preview](https://img.shields.io/badge/Status-Conclu%C3%ADdo-brightgreen)
+![VintagePins Preview](https://img.shields.io/badge/Status-Em_Andamento-orange)
 
 ---
 
